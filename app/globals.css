@@ -1,0 +1,335 @@
+:root {
+  --bg: #05070f;
+  --bg-2: #0a1024;
+  --blue: #13245a;
+  --blue-bright: #3a5cff;
+  --ink: #f2f5ff;
+  --muted: #93a0c8;
+  --line: rgba(147, 160, 200, 0.18);
+  --font-display: "Arial Black", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-body: ui-sans-serif, system-ui, "Helvetica Neue", Arial, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  line-height: 1.5;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Hide the OS cursor only once the custom one is live. */
+body.has-custom-cursor,
+body.has-custom-cursor * {
+  cursor: none !important;
+}
+
+/* ---------- 3D scene layer (fixed background) ---------- */
+.scene-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.scene-layer::after {
+  /* soft vignette to seat the model in the dark */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    120% 90% at 50% 40%,
+    transparent 40%,
+    rgba(3, 5, 12, 0.75) 100%
+  );
+}
+.scene-loading {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(80% 60% at 50% 45%, #0c1430 0%, var(--bg) 70%);
+}
+
+/* ---------- Header ---------- */
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px clamp(20px, 5vw, 64px);
+  mix-blend-mode: difference;
+}
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+}
+.logo__word {
+  font-family: var(--font-display);
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  font-size: 18px;
+}
+.nav {
+  display: flex;
+  align-items: center;
+  gap: clamp(16px, 3vw, 40px);
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.nav a {
+  position: relative;
+  padding: 4px 0;
+  transition: opacity 0.3s ease;
+}
+.nav a:hover {
+  opacity: 0.55;
+}
+.nav__cta {
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  padding: 8px 18px !important;
+}
+
+.scroll-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--line);
+}
+.scroll-bar__fill {
+  height: 100%;
+  width: 100%;
+  background: var(--blue-bright);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+/* ---------- Story panels ---------- */
+.story {
+  position: relative;
+  z-index: 2;
+}
+.panel {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  padding: 14vh clamp(20px, 6vw, 96px);
+}
+.panel--left {
+  justify-content: flex-start;
+  text-align: left;
+}
+.panel--right {
+  justify-content: flex-end;
+  text-align: right;
+}
+.panel--center {
+  justify-content: center;
+  text-align: center;
+}
+.panel__inner {
+  max-width: 620px;
+  position: relative;
+}
+
+.anchor {
+  position: absolute;
+  top: -120px;
+}
+
+/* ---------- Typography ---------- */
+.eyebrow {
+  display: inline-block;
+  font-size: 13px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 22px;
+}
+.headline {
+  font-family: var(--font-display);
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: clamp(2.8rem, 11vw, 9rem);
+  line-height: 0.86;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.word-mask {
+  display: inline-block;
+  overflow: hidden;
+  padding: 0 0.06em 0.12em;
+  margin: 0 -0.06em;
+  vertical-align: top;
+}
+.word {
+  display: inline-block;
+  will-change: transform;
+}
+.lede {
+  margin-top: 28px;
+  font-size: clamp(1rem, 1.6vw, 1.25rem);
+  color: var(--muted);
+  max-width: 46ch;
+}
+.panel--right .lede {
+  margin-left: auto;
+}
+.panel--center .lede {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.specs {
+  list-style: none;
+  margin-top: 30px;
+  display: grid;
+  gap: 14px;
+}
+.specs li {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: clamp(0.95rem, 1.4vw, 1.1rem);
+}
+.specs strong {
+  color: var(--ink);
+  font-weight: 700;
+  margin-right: 8px;
+}
+
+.scroll-hint {
+  display: inline-block;
+  margin-top: 56px;
+  font-size: 12px;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--muted);
+  animation: float 2s ease-in-out infinite;
+}
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateY(8px);
+    opacity: 1;
+  }
+}
+
+.cta {
+  display: inline-block;
+  margin-top: 36px;
+  font-family: var(--font-display);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 1rem;
+  padding: 16px 34px;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  color: var(--ink);
+  transition: background 0.35s ease, color 0.35s ease, transform 0.35s ease;
+}
+.cta:hover {
+  background: var(--ink);
+  color: var(--bg);
+  transform: translateY(-2px);
+}
+
+.footer {
+  margin-top: 64px;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ---------- Custom cursor ---------- */
+.cursor-dot,
+.cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+  pointer-events: none;
+  border-radius: 50%;
+  will-change: transform;
+}
+.cursor-dot {
+  width: 7px;
+  height: 7px;
+  margin: -3.5px 0 0 -3.5px;
+  background: var(--ink);
+}
+.cursor-ring {
+  width: 38px;
+  height: 38px;
+  margin: -19px 0 0 -19px;
+  border: 1.5px solid rgba(242, 245, 255, 0.6);
+  transition: width 0.25s ease, height 0.25s ease, margin 0.25s ease,
+    background 0.25s ease, border-color 0.25s ease;
+}
+.cursor-ring.is-hovering {
+  width: 64px;
+  height: 64px;
+  margin: -32px 0 0 -32px;
+  background: rgba(58, 92, 255, 0.18);
+  border-color: var(--blue-bright);
+}
+.cursor-ring.is-down {
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 640px) {
+  .nav a:not(.nav__cta) {
+    display: none;
+  }
+  .panel--right {
+    text-align: left;
+    justify-content: flex-start;
+  }
+  .panel--right .lede {
+    margin-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .scroll-hint {
+    animation: none;
+  }
+}
