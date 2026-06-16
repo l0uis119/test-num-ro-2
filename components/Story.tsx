@@ -10,9 +10,10 @@ import {
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Logo from "./Logo";
-import { scrollState } from "@/lib/scrollStore";
+import { pointer, lerp } from "@/lib/scrollStore";
+import { IMAGES, PRODUCT } from "@/lib/site";
 
-/* ---------- small building blocks ---------- */
+/* ---------- building blocks ---------- */
 
 function Headline({ children }: { children: string }) {
   return (
@@ -26,23 +27,36 @@ function Headline({ children }: { children: string }) {
   );
 }
 
-function Panel({
+/** Full-bleed photographic background with a scroll parallax + dark scrim. */
+function ParallaxBg({ src, dim = 0.55 }: { src: string; dim?: number }) {
+  return (
+    <div className="pbg" aria-hidden="true">
+      <div className="pbg__img" style={{ backgroundImage: `url(${src})` }} />
+      <div className="pbg__scrim" style={{ opacity: dim }} />
+    </div>
+  );
+}
+
+function Scene({
+  src,
+  dim,
   align,
   children,
 }: {
+  src: string;
+  dim?: number;
   align: "left" | "right" | "center";
   children: ReactNode;
 }) {
   return (
-    <section className={`panel panel--${align}`}>
-      <div className="panel__inner parallax">{children}</div>
+    <section className={`scene scene--${align}`}>
+      <ParallaxBg src={src} dim={dim} />
+      <div className="scene__content parallax">{children}</div>
     </section>
   );
 }
 
-const SIZES = ["S", "M", "L", "XL", "XXL"] as const;
-
-const FAQS: { q: string; a: string }[] = [
+const FAQS = [
   {
     q: "Quelle est la matière exactement ?",
     a: "Une toile de coton 14 oz tissée serrée, teintée à l'indigo grand teint. Dense, elle tombe droit et se patine avec le temps.",
@@ -61,13 +75,14 @@ const FAQS: { q: string; a: string }[] = [
   },
 ];
 
-/* ---------- main component ---------- */
+/* ---------- main ---------- */
 
 export default function Story() {
   const root = useRef<HTMLDivElement>(null);
-  const cinematic = useRef<HTMLDivElement>(null);
+  const hero = useRef<HTMLDivElement>(null);
+  const tilt = useRef<HTMLDivElement>(null);
 
-  const [size, setSize] = useState<(typeof SIZES)[number] | null>("L");
+  const [size, setSize] = useState<string>("L");
   const [added, setAdded] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [email, setEmail] = useState("");
@@ -77,26 +92,14 @@ export default function Story() {
     gsap.registerPlugin(ScrollTrigger);
 
     const ctx = gsap.context(() => {
-      // Drive the 0→1 progress that the 3D journey reads — mapped to the
-      // cinematic block only, so the climb climaxes right as the real content
-      // takes over.
-      ScrollTrigger.create({
-        trigger: cinematic.current!,
-        start: "top top",
-        end: "bottom bottom",
-        scrub: true,
-        onUpdate: (self) => {
-          scrollState.progress = self.progress;
-        },
-      });
-
+      // Headlines: mask-reveal word by word.
       gsap.utils.toArray<HTMLElement>(".headline").forEach((h) => {
         gsap.from(h.querySelectorAll(".word"), {
           yPercent: 120,
           duration: 1,
           ease: "power4.out",
           stagger: 0.08,
-          scrollTrigger: { trigger: h, start: "top 82%" },
+          scrollTrigger: { trigger: h, start: "top 85%" },
         });
       });
 
@@ -110,21 +113,6 @@ export default function Story() {
         });
       });
 
-      // Parallax drift only on the cinematic panels.
-      gsap.utils.toArray<HTMLElement>(".panel .parallax").forEach((el) => {
-        gsap.to(el, {
-          yPercent: -16,
-          ease: "none",
-          scrollTrigger: {
-            trigger: el.closest(".panel"),
-            start: "top bottom",
-            end: "bottom top",
-            scrub: true,
-          },
-        });
-      });
-
-      // Stagger reveal of card grids.
       gsap.utils.toArray<HTMLElement>(".stagger").forEach((grid) => {
         gsap.from(grid.children, {
           y: 50,
@@ -135,6 +123,46 @@ export default function Story() {
           scrollTrigger: { trigger: grid, start: "top 85%" },
         });
       });
+
+      // Photographic backgrounds drift slower than the page → depth.
+      gsap.utils.toArray<HTMLElement>(".pbg").forEach((pb) => {
+        const img = pb.querySelector(".pbg__img");
+        if (img) {
+          gsap.fromTo(
+            img,
+            { yPercent: -12 },
+            {
+              yPercent: 12,
+              ease: "none",
+              scrollTrigger: {
+                trigger: pb,
+                start: "top bottom",
+                end: "bottom top",
+                scrub: true,
+              },
+            },
+          );
+        }
+      });
+
+      // Hero: the jean lifts, shrinks and turns from front to back as you scroll.
+      gsap
+        .timeline({
+          scrollTrigger: {
+            trigger: hero.current!,
+            start: "top top",
+            end: "bottom top",
+            scrub: true,
+          },
+        })
+        .to(".jean", { yPercent: -14, scale: 0.9, ease: "none" }, 0)
+        .to(".jean__face--front", { rotateY: 100, opacity: 0, ease: "none" }, 0)
+        .fromTo(
+          ".jean__face--back",
+          { rotateY: -100, opacity: 0 },
+          { rotateY: 0, opacity: 1, ease: "none" },
+          0,
+        );
 
       gsap.to(".scroll-bar__fill", {
         scaleX: 1,
@@ -148,7 +176,25 @@ export default function Story() {
       });
     }, root);
 
-    return () => ctx.revert();
+    // Pointer parallax tilt on the product (independent of GSAP transforms).
+    let raf = 0;
+    const cur = { x: 0, y: 0 };
+    const loop = () => {
+      cur.x = lerp(cur.x, pointer.x, 0.08);
+      cur.y = lerp(cur.y, pointer.y, 0.08);
+      if (tilt.current) {
+        tilt.current.style.transform = `rotateY(${cur.x * 12}deg) rotateX(${
+          cur.y * 8
+        }deg)`;
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+
+    return () => {
+      ctx.revert();
+      cancelAnimationFrame(raf);
+    };
   }, []);
 
   const onSubscribe = (e: FormEvent) => {
@@ -158,7 +204,7 @@ export default function Story() {
 
   return (
     <div ref={root} className="story">
-      {/* ===== Fixed header ===== */}
+      {/* ===== Header ===== */}
       <header className="topbar">
         <Logo />
         <nav className="nav">
@@ -172,62 +218,82 @@ export default function Story() {
         </div>
       </header>
 
-      {/* ===== Cinematic (3D-backed) panels ===== */}
-      <div ref={cinematic} className="cinematic">
-        <Panel align="center">
-          <p className="eyebrow reveal">Collection 01 — Vertical City</p>
-          <Headline>ULTRA BAGGY</Headline>
-          <p className="lede reveal">
-            Un pantalon bleu profond, taillé pour le bitume et la falaise.
-            Défilez : il part en montagne.
-          </p>
-          <div className="hero-cta reveal">
-            <a href="#produit" className="btn btn--solid" data-cursor="link">Précommander · 140 €</a>
-            <a href="#manifeste" className="btn btn--ghost" data-cursor="link">Le manifeste</a>
+      {/* ===== Hero ===== */}
+      <section ref={hero} className="hero">
+        <ParallaxBg src={IMAGES.heroBg} dim={0.62} />
+        <div className="hero__grid">
+          <div className="hero__copy">
+            <p className="eyebrow reveal">Collection 01 — Vertical City</p>
+            <Headline>ULTRA BAGGY</Headline>
+            <p className="lede reveal">
+              Un pantalon bleu profond, ultra lourd, serrable aux chevilles.
+              Conçu pour le bitume et la falaise.
+            </p>
+            <div className="hero-cta reveal">
+              <a href="#produit" className="btn btn--solid" data-cursor="link">
+                Précommander · {PRODUCT.price}
+              </a>
+              <a href="#manifeste" className="btn btn--ghost" data-cursor="link">
+                Le manifeste
+              </a>
+            </div>
           </div>
-          <span className="scroll-hint reveal" aria-hidden="true">scroll</span>
-        </Panel>
 
-        <Panel align="left">
-          <span id="manifeste" className="anchor" />
-          <p className="eyebrow reveal">Le poids comme signature</p>
-          <Headline>ULTRA LOURD</Headline>
-          <p className="lede reveal">
-            14 oz de toile dense qui tombe droit, tient le mouvement et vieillit
-            avec vous. Une matière qui a de la mémoire.
-          </p>
-        </Panel>
+          <div className="jean">
+            <div ref={tilt} className="jean__tilt">
+              <img
+                className="jean__face jean__face--front"
+                src={IMAGES.jeanFront}
+                alt="Pantalon BLOC Monolith, face"
+              />
+              <img
+                className="jean__face jean__face--back"
+                src={IMAGES.jeanBack}
+                alt="Pantalon BLOC Monolith, dos"
+              />
+            </div>
+            <span className="jean__caption">Tournez-le · face / dos</span>
+          </div>
+        </div>
+        <span className="scroll-hint" aria-hidden="true">scroll</span>
+      </section>
 
-        <Panel align="right">
+      {/* ===== Cinematic photo scenes ===== */}
+      <Scene src={IMAGES.range} dim={0.5} align="left">
+        <span id="manifeste" className="anchor" />
+        <p className="eyebrow reveal">Le poids comme signature</p>
+        <Headline>ULTRA LOURD</Headline>
+        <p className="lede reveal">
+          14 oz de toile dense qui tombe droit, tient le mouvement et vieillit
+          avec vous. Une matière qui a de la mémoire.
+        </p>
+      </Scene>
+
+      <section className="split">
+        <div className="split__media">
+          <img src={IMAGES.jeanBack} alt="Cheville resserrée du pantalon BLOC" />
+        </div>
+        <div className="split__copy parallax">
           <p className="eyebrow reveal">Resserrable</p>
           <Headline>SERRÉ AUX CHEVILLES</Headline>
           <p className="lede reveal">
-            Cordon de serrage intégré : ouvert en ville, verrouillé sur le mur.
-            La cheville libre, jamais dans vos pieds.
+            Cordon de serrage intégré et anneau porte-matériel : ouvert en ville,
+            verrouillé sur le mur. La cheville libre, jamais dans vos pieds.
           </p>
-        </Panel>
+        </div>
+      </section>
 
-        <Panel align="left">
-          <p className="eyebrow reveal">Un vêtement, deux terrains</p>
-          <Headline>BITUME & FALAISE</Headline>
-          <p className="lede reveal">
-            Du trottoir à la voie : une seule pièce, deux mondes. Conçue pour
-            grimper, faite pour traîner.
-          </p>
-        </Panel>
-
-        <Panel align="center">
-          <p className="eyebrow reveal">Sommet</p>
-          <Headline>PLUS HAUT</Headline>
-          <p className="lede reveal">
-            La nuit tombe sur la crête. Le bleu profond prend tout son sens.
-          </p>
-        </Panel>
-      </div>
+      <Scene src={IMAGES.summit} dim={0.5} align="right">
+        <p className="eyebrow reveal">Un vêtement, deux terrains</p>
+        <Headline>BITUME & FALAISE</Headline>
+        <p className="lede reveal">
+          Du trottoir à la voie : une seule pièce, deux mondes. Conçue pour
+          grimper, faite pour traîner.
+        </p>
+      </Scene>
 
       {/* ===== Conventional content ===== */}
       <div className="content">
-        {/* Marquee */}
         <div className="marquee" aria-hidden="true">
           <div className="marquee__track">
             {Array.from({ length: 2 }).map((_, k) => (
@@ -239,7 +305,6 @@ export default function Story() {
           </div>
         </div>
 
-        {/* Stats */}
         <section className="stats stagger">
           <div className="stat"><strong>14 oz</strong><span>Toile de coton</span></div>
           <div className="stat"><strong>5</strong><span>Poches utiles</span></div>
@@ -247,7 +312,6 @@ export default function Story() {
           <div className="stat"><strong>∞</strong><span>Liberté de mouvement</span></div>
         </section>
 
-        {/* Features */}
         <section className="section">
           <header className="section__head">
             <p className="eyebrow reveal">Pensé dans le détail</p>
@@ -272,42 +336,42 @@ export default function Story() {
           </div>
         </section>
 
-        {/* Lookbook */}
         <section className="section">
           <header className="section__head">
             <p className="eyebrow reveal">Lookbook</p>
             <h3 className="section__title reveal">Le même pantalon, partout</h3>
           </header>
           <div className="lookbook stagger">
-            <div className="shot shot--a" data-cursor="link"><span>En ville</span></div>
-            <div className="shot shot--b" data-cursor="link"><span>Sur le mur</span></div>
-            <div className="shot shot--c" data-cursor="link"><span>En bivouac</span></div>
+            <div className="shot" data-cursor="link" style={{ backgroundImage: `url(${IMAGES.rack})` }}><span>En boutique</span></div>
+            <div className="shot" data-cursor="link" style={{ backgroundImage: `url(${IMAGES.summit})` }}><span>En montagne</span></div>
+            <div className="shot" data-cursor="link" style={{ backgroundImage: `url(${IMAGES.heroBg})` }}><span>Sur le mur</span></div>
           </div>
         </section>
 
-        {/* Buy module */}
+        {/* Buy module — uses the two product images */}
         <section id="produit" className="buy">
-          <div className="buy__visual" data-cursor="link" aria-hidden="true">
-            <span className="buy__tag">Bleu Profond</span>
+          <div className="buy__gallery">
+            <img className="buy__img buy__img--main" src={IMAGES.jeanFront} alt="Pantalon BLOC Monolith, face" />
+            <img className="buy__img buy__img--thumb" src={IMAGES.jeanBack} alt="Pantalon BLOC Monolith, dos" />
           </div>
           <div className="buy__panel reveal">
             <p className="eyebrow">BLOC — Collection 01</p>
-            <h3 className="buy__name">Pantalon Monolith</h3>
-            <p className="buy__price">140 €</p>
+            <h3 className="buy__name">{PRODUCT.name}</h3>
+            <p className="buy__price">{PRODUCT.price}</p>
             <p className="buy__desc">
               Baggy, lourd, serrable aux chevilles. Une seule couleur, faite pour
-              durer : bleu profond indigo.
+              durer : {PRODUCT.colorway.toLowerCase()} indigo.
             </p>
 
             <div className="opt">
-              <span className="opt__label">Couleur</span>
-              <span className="swatch" style={{ background: "#1d3a85" }} title="Bleu Profond" />
+              <span className="opt__label">Couleur — {PRODUCT.colorway}</span>
+              <span className="swatch" style={{ background: "#1d3a85" }} />
             </div>
 
             <div className="opt">
               <span className="opt__label">Taille</span>
               <div className="sizes">
-                {SIZES.map((s) => (
+                {PRODUCT.sizes.map((s) => (
                   <button
                     key={s}
                     className={`size ${size === s ? "is-active" : ""}`}
@@ -325,13 +389,12 @@ export default function Story() {
               data-cursor="link"
               onClick={() => setAdded(true)}
             >
-              {added ? "Ajouté au panier ✓" : `Ajouter au panier — ${size ?? "?"}`}
+              {added ? "Ajouté au panier ✓" : `Ajouter au panier — ${size}`}
             </button>
             <p className="buy__note">Précommande · expédition sous 48 h · retours gratuits 30 j</p>
           </div>
         </section>
 
-        {/* Press */}
         <section className="press stagger" aria-label="On parle de nous">
           <span>VERTICAL MAG</span>
           <span>BÉTON ZINE</span>
@@ -340,7 +403,6 @@ export default function Story() {
           <span>GRÈS</span>
         </section>
 
-        {/* Testimonials */}
         <section className="section">
           <div className="quotes stagger">
             <blockquote className="quote">
@@ -354,8 +416,7 @@ export default function Story() {
           </div>
         </section>
 
-        {/* FAQ */}
-        <section id="faq" className="section faq">
+        <section id="faq" className="section">
           <header className="section__head">
             <p className="eyebrow reveal">Questions fréquentes</p>
             <h3 className="section__title reveal">Tout savoir avant de grimper</h3>
@@ -372,16 +433,17 @@ export default function Story() {
                   <span>{item.q}</span>
                   <span className="acc__sign">{openFaq === i ? "−" : "+"}</span>
                 </button>
-                <div className="acc__body">
-                  <p>{item.a}</p>
-                </div>
+                <div className="acc__body"><p>{item.a}</p></div>
               </li>
             ))}
           </ul>
         </section>
+      </div>
 
-        {/* Newsletter */}
-        <section className="newsletter">
+      {/* ===== Newsletter over photo ===== */}
+      <section className="newsletter">
+        <ParallaxBg src={IMAGES.dusk} dim={0.55} />
+        <div className="newsletter__inner parallax">
           <h3 className="newsletter__title reveal">Entrez dans le BLOC</h3>
           <p className="reveal">
             Édition limitée à 500 pièces numérotées. Soyez prévenu au lancement.
@@ -405,42 +467,42 @@ export default function Story() {
               </button>
             </form>
           )}
-        </section>
+        </div>
+      </section>
 
-        {/* Footer */}
-        <footer className="footer">
-          <div className="footer__top">
-            <div className="footer__brand">
-              <Logo />
-              <p>Vertical City Goods.<br />Bitume &amp; falaise depuis 2026.</p>
+      {/* ===== Footer ===== */}
+      <footer className="footer">
+        <div className="footer__top">
+          <div className="footer__brand">
+            <Logo />
+            <p>Vertical City Goods.<br />Bitume &amp; falaise depuis 2026.</p>
+          </div>
+          <div className="footer__cols">
+            <div>
+              <h5>Boutique</h5>
+              <a href="#produit" data-cursor="link">Pantalon Monolith</a>
+              <a href="#produit" data-cursor="link">Guide des tailles</a>
+              <a href="#produit" data-cursor="link">Livraison</a>
             </div>
-            <div className="footer__cols">
-              <div>
-                <h5>Boutique</h5>
-                <a href="#produit" data-cursor="link">Pantalon Monolith</a>
-                <a href="#produit" data-cursor="link">Guide des tailles</a>
-                <a href="#produit" data-cursor="link">Livraison</a>
-              </div>
-              <div>
-                <h5>Marque</h5>
-                <a href="#manifeste" data-cursor="link">Manifeste</a>
-                <a href="#faq" data-cursor="link">FAQ</a>
-                <a href="#produit" data-cursor="link">Durabilité</a>
-              </div>
-              <div>
-                <h5>Suivre</h5>
-                <a href="#" data-cursor="link">Instagram</a>
-                <a href="#" data-cursor="link">TikTok</a>
-                <a href="#" data-cursor="link">Newsletter</a>
-              </div>
+            <div>
+              <h5>Marque</h5>
+              <a href="#manifeste" data-cursor="link">Manifeste</a>
+              <a href="#faq" data-cursor="link">FAQ</a>
+              <a href="#produit" data-cursor="link">Durabilité</a>
+            </div>
+            <div>
+              <h5>Suivre</h5>
+              <a href="#" data-cursor="link">Instagram</a>
+              <a href="#" data-cursor="link">TikTok</a>
+              <a href="#" data-cursor="link">Newsletter</a>
             </div>
           </div>
-          <div className="footer__bottom">
-            <span>© {new Date().getFullYear()} BLOC</span>
-            <span>Conçu pour grimper. Fait pour traîner.</span>
-          </div>
-        </footer>
-      </div>
+        </div>
+        <div className="footer__bottom">
+          <span>© {new Date().getFullYear()} BLOC</span>
+          <span>Conçu pour grimper. Fait pour traîner.</span>
+        </div>
+      </footer>
     </div>
   );
 }

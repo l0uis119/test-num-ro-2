@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { scrollState } from "@/lib/scrollStore";
+import { pointer } from "@/lib/scrollStore";
 
 /**
  * A two-part custom cursor: a small instantly-tracking dot and a larger ring
@@ -35,9 +35,9 @@ export default function CustomCursor() {
       // The dot is locked to the real pointer for precision.
       dot.style.transform = `translate3d(${mouse.x}px, ${mouse.y}px, 0)`;
 
-      // Feed normalized pointer (-1 → 1) to the 3D scene for parallax.
-      scrollState.pointerX = (mouse.x / window.innerWidth) * 2 - 1;
-      scrollState.pointerY = -((mouse.y / window.innerHeight) * 2 - 1);
+      // Feed normalized pointer (-1 → 1) to the parallax layers.
+      pointer.x = (mouse.x / window.innerWidth) * 2 - 1;
+      pointer.y = -((mouse.y / window.innerHeight) * 2 - 1);
     };
 
     const render = () => {

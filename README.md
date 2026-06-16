@@ -4,56 +4,51 @@ Landing page immersive et défilante pour **BLOC**, une marque fictive de
 vêtement. Le produit héro : un pantalon **bleu profond, ultra baggy, ultra
 lourd, serrable aux chevilles**, conçu pour le bitume et la falaise.
 
-Au défilement, le pantalon **traverse une chaîne de montagnes 3D** et **grimpe
-vers le sommet** pendant que la lumière passe du **jour au crépuscule puis à la
-nuit étoilée**. Des accroches apparaissent en parallaxe, puis le site bascule
-sur une vraie page produit (fiche, tailles, FAQ, newsletter…).
+Le site est construit autour de **vraies photos** : des photographies de
+montagne / escalade en fond (parallaxe au défilement) et le **pantalon en photo
+produit** (face / dos) qui se retourne au scroll.
 
 ## Stack
 
 - **Next.js 14** (App Router, TypeScript)
-- **Three.js** + **@react-three/fiber** + **@react-three/drei** pour la scène 3D
-- **GSAP** + **ScrollTrigger** pour les animations au scroll
-- **simplex-noise** pour le relief des montagnes
-- Curseur personnalisé maison (dot + ring réactif au survol)
+- **GSAP** + **ScrollTrigger** (parallaxe, révélations, retournement du produit)
+- Curseur personnalisé maison (dot + ring réactif au survol + parallaxe pointeur)
 
-## La scène 3D
+## Vos visuels du pantalon
 
-| Élément | Fichier | Détail |
-| --- | --- | --- |
-| Montagnes | [`components/Mountains.tsx`](components/Mountains.tsx) | Deux chaînes (FBM ridgé), facettes low-poly stylisées, neige sur les crêtes, parallaxe au scroll |
-| Pantalon | [`components/Pants.tsx`](components/Pants.tsx) | Jambes en tubes elliptiques balayés le long d'une courbe (genou plié, cheville resserrée), ceinture + bracelets de cheville, toile bleu profond `sheen` |
-| Atmosphère | [`components/Atmosphere.tsx`](components/Atmosphere.tsx) | Ciel/brouillard/soleil jour → crépuscule → nuit, étoiles, neige qui dérive |
-| Caméra | [`components/Scene.tsx`](components/Scene.tsx) | Plan de suivi : la caméra reste verrouillée sur le pantalon pendant l'ascension |
-| Trajectoire | [`lib/journey.ts`](lib/journey.ts) | Chemin partagé pantalon + caméra, fonction du scroll |
+Les images du jean sont des **placeholders**. Pour mettre vos deux visuels :
 
-### Brancher un vrai modèle (.glb)
+1. Enregistrez votre **face** dans `public/images/jean-front.jpg`
+2. Enregistrez votre **dos** dans `public/images/jean-back.jpg`
+   (gardez ces noms ; sinon, modifiez les chemins dans
+   [`lib/site.ts`](lib/site.ts)).
 
-Le pantalon est **paramétrique** par défaut (aucune dépendance à un fichier
-externe, donc il s'affiche toujours). Pour utiliser un vrai modèle :
+C'est tout — le héros (retournement face/dos), la galerie d'achat et la section
+« cheville » utilisent ces deux fichiers automatiquement.
 
-1. Déposez votre fichier dans `public/models/pants.glb`.
-2. Dans [`components/Pants.tsx`](components/Pants.tsx), passez
-   `const MODEL_URL = "/models/pants.glb";`
+## Les photos de fond
 
-Le placement, l'animation d'ascension et le recolorage bleu profond
-fonctionnent tels quels.
+Photos libres (Unsplash) téléchargées dans `public/images/` :
+`bg-cliff` (héros, grimpeur au coucher de soleil), `bg-range` (chaîne pastel),
+`bg-summit` (crête herbeuse), `bg-valley` (ciel crépusculaire). Centralisées
+dans [`lib/site.ts`](lib/site.ts).
 
 ## Le site
 
-Après la séquence cinématique : bandeau marquee, chiffres clés, cartes de
-features, lookbook, **module d'achat interactif** (sélecteur de taille, ajout au
-panier), bandeau presse, avis clients, **FAQ accordéon**, **formulaire
-newsletter** et footer multi-colonnes.
+Héros photo + pantalon flottant qui se retourne · scènes cinématiques en
+parallaxe (Ultra Lourd, Serré aux chevilles, Bitume & Falaise) · marquee ·
+chiffres clés · cartes features · lookbook · **module d'achat** (sélecteur de
+taille, ajout panier, face + dos) · presse · avis · **FAQ accordéon** ·
+**newsletter** sur photo · footer multi-colonnes.
 
 ## Démarrer
 
 ```bash
 npm install
 npm run dev      # http://localhost:3000
-npm run build    # build de production
+npm run build
 ```
 
 ---
 
-© BLOC — Vertical City Goods.
+© BLOC — Vertical City Goods. Photos de fond : Unsplash (licence libre).
